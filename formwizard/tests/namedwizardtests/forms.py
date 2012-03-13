@@ -1,12 +1,9 @@
 from django import forms
-from django.forms.formsets import formset_factory
+from formwizard.forms import NamedUrlFormWizard
 from django.http import HttpResponse
 from django.template import Template, Context
-
 from django.contrib.auth.models import User
-
-from formwizard.views import NamedUrlWizardView
-
+from django.forms.formsets import formset_factory
 
 class Page1(forms.Form):
     name = forms.CharField(max_length=100)
@@ -22,21 +19,17 @@ class Page3(forms.Form):
 
 Page4 = formset_factory(Page3, extra=2)
 
-class ContactWizard(NamedUrlWizardView):
-    def done(self, form_list, **kwargs):
+class ContactWizard(NamedUrlFormWizard):
+    def done(self, request, storage, form_list, **kwargs):
         c = Context({
             'form_list': [x.cleaned_data for x in form_list],
-            'all_cleaned_data': self.get_all_cleaned_data()
+            'all_cleaned_data': self.get_all_cleaned_data(request, storage)
         })
 
         for form in self.form_list.keys():
-            c[form] = self.get_cleaned_data_for_step(form)
+            c[form] = self.get_cleaned_data_for_step(request, storage, form)
 
-        c['this_will_fail'] = self.get_cleaned_data_for_step('this_will_fail')
+        c['this_will_fail'] = self.get_cleaned_data_for_step(
+            request, storage, 'this_will_fail')
         return HttpResponse(Template('').render(c))
 
-class SessionContactWizard(ContactWizard):
-    storage_name = 'formwizard.storage.session.SessionStorage'
-
-class CookieContactWizard(ContactWizard):
-    storage_name = 'formwizard.storage.cookie.CookieStorage'
